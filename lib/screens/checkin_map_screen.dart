@@ -10,7 +10,15 @@ class CheckInMapScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Confirmar Local')),
+      appBar: AppBar(
+        title: const Text('Confirmar Localização'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.pop(context, false),
+          ),
+        ],
+      ),
       body: FlutterMap(
         options: MapOptions(
           initialCenter: initialLocation,
@@ -19,7 +27,7 @@ class CheckInMapScreen extends StatelessWidget {
         children: [
           TileLayer(
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.example.checkin_app',
+            userAgentPackageName: 'com.example.mudepocflutter',
           ),
           MarkerLayer(
             markers: [
@@ -37,14 +45,10 @@ class CheckInMapScreen extends StatelessWidget {
           ),
         ],
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.pop(context, initialLocation);
-          },
-          child: const Text('Confirmar Check-In'),
-        ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.check),
+        label: const Text('Confirmar Check-in'),
+        onPressed: () => Navigator.pop(context, true),
       ),
     );
   }

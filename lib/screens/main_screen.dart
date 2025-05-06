@@ -1,71 +1,89 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:latlong2/latlong.dart';
-import '../db/checkin_db.dart';
-import '../models/checkin_model.dart';
-import 'checkin_map_screen.dart';
+import 'package:mudepocflutter/models/event.dart';
+import 'package:mudepocflutter/db/event_database.dart';
+import 'event_details_screen.dart';
+import 'event_form_screen.dart';
 
-class MainScreen extends StatelessWidget {
-  const MainScreen({super.key});
+class MainScreen extends StatefulWidget {
+  const MainScreen({Key? key}) : super(key: key);
 
-  Future<void> _handleCheckIn(BuildContext context) async {
-    LocationPermission permission = await Geolocator.checkPermission();
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
 
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permissão de localização negada.')),
-        );
-        return;
-      }
-    }
+class _MainScreenState extends State<MainScreen> {
+  List<Event> _events = [];
 
-    if (permission == LocationPermission.deniedForever) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permissão permanentemente negada. Vá nas configurações.'),
-        ),
-      );
-      return;
-    }
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+  }
 
-    final position = await Geolocator.getCurrentPosition();
-    final location = LatLng(position.latitude, position.longitude);
+  Future<void> _loadEvents() async {
+    final events = await EventDatabase().getAllEvents();
+    setState(() {
+      _events = events;
+    });
+  }
 
+  void _navigateToForm({Event? event}) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CheckInMapScreen(initialLocation: location),
+        builder: (_) => EventFormScreen(event: event),
       ),
     );
 
-
-    if (result != null && result is LatLng) {
-      final now = DateTime.now().toIso8601String();
-      final checkin = CheckInModel(
-        latitude: result.latitude,
-        longitude: result.longitude,
-        timestamp: now,
-      );
-
-      await CheckInDatabase.insertCheckIn(checkin);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Check-In salvo com sucesso!')),
-      );
+    if (result == true) {
+      _loadEvents(); // recarrega ao salvar
     }
+  }
+
+  void _deleteEvent(int id) async {
+    await EventDatabase().deleteEvent(id);
+    _loadEvents();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Tela Principal')),
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () => _handleCheckIn(context),
-          child: const Text('Fazer Check-In'),
-        ),
+      appBar: AppBar(title: const Text('Eventos')),
+      body: ListView.builder(
+        itemCount: _events.length,
+        itemBuilder: (context, index) {
+          final event = _events[index];
+          return ListTile(
+            title: Text(event.name),
+            subtitle: Text('${event.date} – ${event.time}\n${event.location}'),
+            isThreeLine: true,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EventDetailsScreen(event: event),
+                ),
+              );
+            },
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _navigateToForm(event: event),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => _deleteEvent(event.id!),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () => _navigateToForm(),
       ),
     );
   }

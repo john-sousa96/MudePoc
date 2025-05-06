@@ -1,37 +1,22 @@
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:mudepocflutter/models/checkin_model.dart';
+import 'package:mudepocflutter/db/database_service.dart';
+import 'package:sembast/sembast.dart';
 
 class CheckInDatabase {
-  static Future<Database> _getDB() async {
-    final dbPath = await getDatabasesPath();
-    return openDatabase(
-      join(dbPath, 'checkins.db'),
-      onCreate: (db, version) {
-        return db.execute(
-          'CREATE TABLE checkins(id INTEGER PRIMARY KEY, latitude REAL, longitude REAL, timestamp TEXT)',
-        );
-      },
-      version: 1,
-    );
-  }
 
   static Future<void> insertCheckIn(CheckInModel checkin) async {
-    final db = await _getDB();
-    await db.insert('checkins', checkin.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
+    final db = await DatabaseService.db;
+    await DatabaseService.checkInStore.add(db, checkin.toMap());
   }
 
-  static Future<List<CheckInModel>> getCheckIns() async {
-    final db = await _getDB();
-    final List<Map<String, dynamic>> maps = await db.query('checkins');
+  static Future<List<CheckInModel>> getCheckInsForEvent(int eventId) async {
+    final db = await DatabaseService.db;
+    final records = await DatabaseService.checkInStore.find(db,
+        finder: Finder(filter: Filter.equals('event_id', eventId)));
 
-    return List.generate(maps.length, (i) {
-      return CheckInModel(
-        id: maps[i]['id'],
-        latitude: maps[i]['latitude'],
-        longitude: maps[i]['longitude'],
-        timestamp: maps[i]['timestamp'],
-      );
-    });
+    return records.map((record) {
+      return CheckInModel.fromMap(record.value, record.key);
+    }).toList();
   }
+
 }

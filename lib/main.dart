@@ -1,9 +1,22 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'screens/main_screen.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:mudepocflutter/db/database_service.dart';
 
-void main() {
-  runApp(const MaterialApp(
+
+
+void main() async {
+  // Só para apps desktop / testes — se estiver rodando no Android/iOS ignore esta parte
+  WidgetsFlutterBinding.ensureInitialized();
+  await DatabaseService.db;
+
+  if (!kIsWeb) {
+    // Só inicializa FFI se NÃO for Web
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+  runApp( MaterialApp(
     debugShowCheckedModeBanner: false,
     home: MainScreen(),
   ));
