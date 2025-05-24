@@ -1,16 +1,3 @@
-# mudepocflutter
+# Mude
 
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+O presente projeto foi desenvolvido com o propósito de identificar as principais dificuldades enfrentadas pelas organizações sociais na gestão de voluntários e propor uma solução tecnológica viável. A proposta envolveu a criação de um aplicativo mobile para dispositivos Android e iOS, desenvolvido por alunos universitários, com o objetivo de facilitar a divulgação e a organização das ações promovidas pela instituição "Por Amor – Ações Sociais". A escolha por um aplicativo justifica-se pela popularização dos smartphones e sua facilidade de uso, o que amplia o alcance e a efetividade da solução. A metodologia adotada seguiu o modelo "Ouvir, Criar e Implementar", proposto pela UNIVESP, iniciando com reuniões de escuta ativa com representantes da ONG para levantamento de necessidades e expectativas. Dentre as funcionalidades definidas, destacam-se: calendário com notificações de eventos, formulários de inscrição, check-in com geolocalização para registro preciso da presença dos voluntários, sistema de emissão automatizada de certificados e relatórios, e um canal direto de comunicação entre voluntários e a organização. O design do protótipo foi validado com a ONG, que contribuiu com sugestões para melhorar a usabilidade e a estrutura das informações. Com as alterações implementadas, os testes foram realizados em dispositivos móveis e o feedback dos usuários e da ONG coletado para ajustes finais. A solução final visa não apenas otimizar a gestão administrativa, como também fortalecer o engajamento dos voluntários e ampliar o impacto social das ações realizadas. 
