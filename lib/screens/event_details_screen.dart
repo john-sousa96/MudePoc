@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:mudepocflutter/models/event.dart';
-import 'package:mudepocflutter/db/checkin_db.dart';
-import 'package:mudepocflutter/models/checkin_model.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
-import 'package:mudepocflutter/screens/checkin_map_screen.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:mudepocflutter/db/checkin_db.dart';
+import 'package:mudepocflutter/models/checkin_model.dart';
+import 'package:mudepocflutter/models/event.dart';
+import 'package:mudepocflutter/screens/checkin_map_screen.dart';
 
 class EventDetailsScreen extends StatefulWidget {
   final Event event;
@@ -19,12 +21,32 @@ class EventDetailsScreen extends StatefulWidget {
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   bool _isRegistered = false;
   bool _isLoading = true;
+  bool _isLoadingLocation = true;
   CheckInModel? _lastCheckIn;
+  LatLng? _eventLocation;
 
   @override
   void initState() {
     super.initState();
     _loadCheckInStatus();
+    _convertAddressToLatLng();
+  }
+
+  Future<void> _convertAddressToLatLng() async {
+    try {
+      final locations = await locationFromAddress(widget.event.location);
+      if (locations.isNotEmpty) {
+        setState(() {
+          _eventLocation = LatLng(locations.first.latitude, locations.first.longitude);
+          _isLoadingLocation = false;
+        });
+      } else {
+        setState(() => _isLoadingLocation = false);
+      }
+    } catch (e) {
+      print('Erro ao converter endereço: $e');
+      setState(() => _isLoadingLocation = false);
+    }
   }
 
   Future<void> _loadCheckInStatus() async {
@@ -36,43 +58,30 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar check-ins: $e')),
-      );
+      setState(() => _isLoading = false);
+      _showSnackBar('Erro ao carregar check-ins: $e');
     }
   }
 
   Future<void> _registerForEvent() async {
-    setState(() {
-      _isRegistered = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Inscrição confirmada com sucesso!')),
-    );
+    setState(() => _isRegistered = true);
+    _showSnackBar('Inscrição confirmada com sucesso!');
   }
 
   Future<void> _checkLocationPermission() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _showSnackBar('O serviço de localização está desativado.');
-      return;
-    }
+    if (!serviceEnabled) return _showSnackBar('O serviço de localização está desativado.');
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        _showSnackBar('Permissão de localização negada.');
-        return;
+        return _showSnackBar('Permissão de localização negada.');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      _showSnackBar('Permissão de localização negada permanentemente. Ative nas configurações.');
-      return;
+      return _showSnackBar('Permissão de localização negada permanentemente. Ative nas configurações.');
     }
 
     await _performCheckIn();
@@ -91,7 +100,6 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         timestamp: formattedDate,
       );
 
-      // Mostrar mapa com confirmação
       final confirmed = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
@@ -112,44 +120,114 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   }
 
   void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _buildMapContent(LatLng location, {double height = 200}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        height: height,
+        child: FlutterMap(
+          options: MapOptions(
+            initialCenter: location,
+            initialZoom: 15.0,
+            interactiveFlags: InteractiveFlag.pinchZoom | InteractiveFlag.drag,
+          ),
+          children: [
+            TileLayer(
+              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              userAgentPackageName: 'com.example.mudepocflutter',
+            ),
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: location,
+                  width: 80,
+                  height: 80,
+                  child: const Icon(
+                    Icons.location_pin,
+                    color: Colors.red,
+                    size: 40,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationUnavailable({double height = 200}) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[300],
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.location_off, size: 50, color: Colors.grey),
+            Text('Localização não disponível'),
+          ],
+        ),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    if (_isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+
+    final orangeColor = const Color(0xFFF99226);
+    final roundedButtonStyle = ElevatedButton.styleFrom(
+      backgroundColor: orangeColor,
+      foregroundColor: Colors.white,
+      minimumSize: const Size(double.infinity, 50),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(25),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    );
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.event.name)),
+      appBar: AppBar(
+        title: Text(widget.event.name),
+        backgroundColor: orangeColor,
+        foregroundColor: Colors.white,
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 200,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                color: Colors.grey[300],
+            // Mapa do local do evento
+            Card(
+              elevation: 6,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.event, size: 50, color: Colors.grey[600]),
+              shadowColor: orangeColor,
+              child: _isLoadingLocation
+                  ? const Center(child: CircularProgressIndicator())
+                  : (_eventLocation != null
+                  ? _buildMapContent(_eventLocation!)
+                  : _buildLocationUnavailable()),
             ),
             const SizedBox(height: 20),
             Text(
               widget.event.name,
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 10),
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 16),
+                Icon(Icons.calendar_today, size: 16, color: orangeColor),
                 const SizedBox(width: 5),
                 Text('${widget.event.date} às ${widget.event.time}'),
               ],
@@ -157,62 +235,65 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             const SizedBox(height: 5),
             Row(
               children: [
-                const Icon(Icons.location_on, size: 16),
+                Icon(Icons.location_on, size: 16, color: orangeColor),
                 const SizedBox(width: 5),
                 Text(widget.event.location),
               ],
             ),
             const SizedBox(height: 20),
-            const Text(
+            Text(
               'Descrição do Evento:',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: orangeColor,
+              ),
             ),
             const SizedBox(height: 5),
-            Text(
-              'Descrição detalhada do evento será exibida aqui.',
-            ),
+            Text('${widget.event.description}'),
             const SizedBox(height: 30),
 
             if (!_isRegistered)
               ElevatedButton(
                 onPressed: _registerForEvent,
+                style: roundedButtonStyle,
                 child: const Text('Inscrever-se no Evento'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                ),
               ),
 
             if (_isRegistered && _lastCheckIn == null)
               ElevatedButton(
                 onPressed: _checkLocationPermission,
+                style: roundedButtonStyle,
                 child: const Text('Fazer Check-in no Local'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: Colors.green,
-                ),
               ),
 
-            if (_lastCheckIn != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Último Check-in:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  Text('Data/Hora: ${_lastCheckIn!.timestamp}'),
-                  Text('Localização: ${_lastCheckIn!.latitude.toStringAsFixed(4)}, ${_lastCheckIn!.longitude.toStringAsFixed(4)}'),
-                  const SizedBox(height: 10),
-                  ElevatedButton(
-                    onPressed: _checkLocationPermission,
-                    child: const Text('Refazer Check-in'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                      backgroundColor: Colors.blue,
-                    ),
-                  ),
-                ],
+            if (_lastCheckIn != null) ...[
+              Text(
+                'Último Check-in:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: orangeColor,
+                ),
               ),
+              Text('Data/Hora: ${_lastCheckIn!.timestamp}'),
+              const SizedBox(height: 10),
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                shadowColor: orangeColor,
+                child: _buildMapContent(
+                  LatLng(_lastCheckIn!.latitude, _lastCheckIn!.longitude),
+                  height: 150,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: _checkLocationPermission,
+                style: roundedButtonStyle,
+                child: const Text('Refazer Check-in'),
+              ),
+            ],
           ],
         ),
       ),

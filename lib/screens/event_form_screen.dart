@@ -22,6 +22,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
   late String _location;
   late String _time;
   late String _date;
+  late String _description;
 
   @override
   void initState() {
@@ -31,6 +32,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
     _location = e?.location ?? '';
     _time = e?.time ?? '';
     _date = e?.date ?? '';
+    _description = e?.description ?? '';
   }
 
   Future<void> _saveForm() async {
@@ -43,6 +45,7 @@ class _EventFormScreenState extends State<EventFormScreen> {
         location: _location,
         time: _time,
         date: _date,
+        description: _description,
       );
 
       if (widget.event == null) {
@@ -119,9 +122,23 @@ class _EventFormScreenState extends State<EventFormScreen> {
                 validator: (value) =>
                 value == null || value.isEmpty ? 'Informe o horário' : null,
               ),
+              TextFormField(
+                initialValue: _description,
+                decoration: const InputDecoration(labelText: 'Descrição do evento'),
+                onSaved: (value) => _description = value!,
+                validator: (value) =>
+                value == null || value.isEmpty ? 'Descreva o evento' : null,
+              ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: _saveForm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFF99226),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 child: const Text('Salvar'),
               ),
             ],

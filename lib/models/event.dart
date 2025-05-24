@@ -4,6 +4,7 @@ class Event {
   String location;
   String date;
   String time;
+  String description;
 
   Event({
     this.id,
@@ -11,6 +12,7 @@ class Event {
     required this.location,
     required this.date,
     required this.time,
+    required this.description
   });
 
   Map<String, dynamic> toMap() {
@@ -19,6 +21,7 @@ class Event {
       'location': location,
       'date': date,
       'time': time,
+      'description': description
     };
   }
 
@@ -29,6 +32,7 @@ class Event {
       location: map['location'] ?? '',
       date: map['date'] ?? '',
       time: map['time'] ?? '',
+      description: map['description'] ?? '',
     );
   }
 }

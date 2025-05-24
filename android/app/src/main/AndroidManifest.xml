@@ -4,9 +4,9 @@
 
 
     <application
-        android:label="mudepocflutter"
+        android:label="Mude"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <uses-library android:name="org.apache.http.legacy" android:required="false"/>
         <activity
             android:name=".MainActivity"
